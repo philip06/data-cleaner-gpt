@@ -2,6 +2,7 @@
     "categories": [
         {
             "question": "What is your job title?",
+            "column_name": "job_title",
             "subcategories": [
                 {
                     "name": "Executive Leadership",

@@ -63,7 +63,7 @@ def process_data(survey_data, categories):
         for cat in categories:
             question = cat["question"]
             subcategories = [subcat["name"] for subcat in cat["subcategories"]]
-            response_key = question.lower().replace(' ', '_')
+            response_key = cat["column_name"]
             if response_key not in row:
                 print(f'Key {response_key} not found in row. Skipping...')
                 continue

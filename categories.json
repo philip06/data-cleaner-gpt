@@ -1,0 +1,65 @@
+{ 
+    "categories": [
+        {
+            "question": "What is your job title?",
+            "subcategories": [
+                {
+                    "name": "Executive Leadership",
+                    "description": "Roles at the senior-most level of an organization, responsible for overall strategic direction and decision-making."
+                },
+                {
+                    "name": "Management",
+                    "description": "Roles responsible for overseeing and directing teams or departments within an organization to achieve specific goals and objectives."
+                },
+                {
+                    "name": "Specialist",
+                    "description": "Roles that require specific expertise or skills in a particular field or area of specialization."
+                },
+                {
+                    "name": "Support & Admin",
+                    "description": "Roles that provide administrative, operational, or logistical support to various departments or individuals within an organization."
+                },
+                {
+                    "name": "Sales & Customer Service",
+                    "description": "Roles focused on generating sales, building customer relationships, and providing excellent customer service."
+                },
+                {
+                    "name": "Insurance",
+                    "description": "Roles related to the insurance industry, such as underwriters who assess and manage risks, insurance agents who sell insurance policies, risk managers who identify and mitigate potential risks, etc."
+                },
+                {
+                    "name": "Marketing & Communications",
+                    "description": "Roles involved in creating and implementing marketing strategies, managing brand development, and handling internal and external communications."
+                },
+                {
+                    "name": "Franchise Development",
+                    "description": "Roles dedicated to the growth and development of franchise networks, including franchise recruitment, support, and operations."
+                },
+                {
+                    "name": "Legal & Research",
+                    "description": "Roles that involve legal administration, compliance, and research activities within organizations."
+                },
+                {
+                    "name": "Human Resources",
+                    "description": "Roles focused on managing the human resources function, including employee relations, recruitment, training, and development."
+                },
+                {
+                    "name": "Finance & Accounting",
+                    "description": "Roles involved in financial management, budgeting, accounting, and financial reporting within an organization."
+                },
+                {
+                    "name": "Operations",
+                    "description": "Roles responsible for overseeing and managing day-to-day operations, ensuring efficiency and effectiveness in delivering products or services."
+                },
+                {
+                    "name": "Training & Development",
+                    "description": "Roles focused on designing and delivering training programs, developing employee skills, and supporting professional development initiatives."
+                },
+                {
+                    "name": "Other",
+                    "description": "Any role that does not fit into one of the other categories mentioned above."
+                }
+            ]
+        }
+    ]
+}

@@ -1,7 +1,7 @@
 # data-cleaner-gpt
 
 # Installation
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 # Configuration
 - Create a file called input_data.csv with the data you want to categorize
@@ -10,4 +10,4 @@ python -m pip install -r requirements.txt
   - ie: What is your job title? => what_is_your_job_title?
 
 # Execution
-python clean_data.py
+python3 clean_data.py

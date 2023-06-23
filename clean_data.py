@@ -78,7 +78,7 @@ def process_data(survey_data, categories):
 
 if __name__ == "__main__":
     # load data from csv
-    survey_data = pd.read_csv("JobTitle.csv", encoding='ISO-8859-1')
+    survey_data = pd.read_csv("input_data.csv", encoding='ISO-8859-1')
 
     # load categories from json file
     categories = load_categories("categories.json")

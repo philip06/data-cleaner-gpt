@@ -3,17 +3,25 @@ import pandas as pd
 import openai
 from requests.exceptions import RetryError
 from tenacity import retry, stop_after_attempt, wait_exponential
+from enum import Enum
 
 openai.api_key = ""
 
+class Operation(Enum):
+    CATEGORIZE = "categorize"
+    NORMALIZE = "normalize"
+
+# Dummy function
+def normalize_response(question, responses, subcategories):
+    normalized_response = responses.lower()
+    return normalized_response
+
+
 def load_categories(filename):
-    # load the JSON file as a pandas DataFrame
     data = pd.read_json(filename)
     
-    # retrieve the "categories" column as a list of dictionaries
     categories = data['categories'].tolist()
 
-    # return the categories
     return categories
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential())
@@ -55,26 +63,43 @@ def categorize_response(question, responses, subcategories):
     except Exception as e:
         print("Error in JSON Parse", e)
         return 'Other'
-
+    
+operation_to_function_map = {
+    Operation.CATEGORIZE: categorize_response,
+    Operation.NORMALIZE: normalize_response,
+}
 
 def process_data(survey_data, categories):
     for _, row in survey_data.iterrows():
-        categorized_row = {}
+        processed_row = {}
         for cat in categories:
-            question = cat["question"]
-            subcategories = [subcat["name"] for subcat in cat["subcategories"]]
-            response_key = cat["column_name"]
+            question = cat.get("question")
+            operation_str = cat.get("operation")
+            try:
+                operation = Operation[operation_str.upper()]
+            except KeyError:
+                print(f'Operation {operation_str} not found. Skipping...')
+                continue
+
+            process_func = operation_to_function_map[operation]
+            
+            subcategories = [subcat.get("name") for subcat in cat.get("subcategories", [])]
+            response_key = cat.get("column_name")
+            
             if response_key not in row:
                 print(f'Key {response_key} not found in row. Skipping...')
                 continue
+                
             responses = row[response_key]
             if responses:
-                categorized_responses = categorize_response(question, responses, subcategories)
-                categorized_row[response_key] = categorized_responses
-        new_row = {**row, **categorized_row}
+                processed_responses = process_func(question, responses, subcategories)
+                processed_row[response_key] = processed_responses
+
+        new_row = {**row, **processed_row}
         # save new row to the csv file
         new_data = pd.DataFrame([new_row])
         new_data.to_csv('newdata.csv', mode='a', header=False, index=False)
+
 
 if __name__ == "__main__":
     # load data from csv

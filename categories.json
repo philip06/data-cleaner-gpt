@@ -3,6 +3,7 @@
         {
             "question": "What is your job title?",
             "column_name": "job_title",
+            "operation": "categorize",
             "subcategories": [
                 {
                     "name": "Executive Leadership",

@@ -1,7 +1,7 @@
 # data-cleaner-gpt
 
 # Installation
-python3 -m pip install -r requirements.txt
+`python3 -m pip install -r requirements.txt`
 
 # Configuration
 - Create a file called input_data.csv with the data you want to categorize
@@ -10,4 +10,4 @@ python3 -m pip install -r requirements.txt
 - Set question to be the question you ask GPT to determine subcategory
 
 # Execution
-python3 clean_data.py
+`python3 clean_data.py`

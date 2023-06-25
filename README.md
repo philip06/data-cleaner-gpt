@@ -13,4 +13,7 @@
 - Set question to be the question you ask GPT to determine subcategory
 
 # Execution
-`python3 clean_data.py`
+```
+export OPENAI_API_KEY=<Your API Key>
+python3 clean_data.py
+```

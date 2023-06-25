@@ -4,8 +4,9 @@ import openai
 from requests.exceptions import RetryError
 from tenacity import retry, stop_after_attempt, wait_exponential
 from enum import Enum
+import os
 
-openai.api_key = ""
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 class Operation(Enum):
     CATEGORIZE = "categorize"

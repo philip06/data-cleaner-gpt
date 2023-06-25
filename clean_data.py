@@ -26,6 +26,7 @@ def load_categories(filename):
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential())
 def categorize_response(question, responses, subcategories):
+
     payload = {
         "model": "gpt-3.5-turbo",
         "temperature": 0,
@@ -40,12 +41,19 @@ def categorize_response(question, responses, subcategories):
                 "content": f"""
                 Question: {question}
                 Here are the possible subcategories: {', '.join([subcat['name'] if isinstance(subcat, dict) else subcat for subcat in subcategories])}. 
-                Please categorize the following response: 
+                Please categorize the following responses: 
                 ###
                 {responses}
                 ###
-                Desired Format: JSON with the key subcategory.
-                Example: {{ "subcategory":"None"}}
+                Desired Format: JSON with the key subcategory. Make sure 
+                Example: {{
+                    "responses": [
+                        {{ 
+                            "record_id":"None"
+                            "subcategory":"None"
+                        }}
+                    ]
+                }}
                 """,
             },
         ],
@@ -55,26 +63,29 @@ def categorize_response(question, responses, subcategories):
         response = openai.ChatCompletion.create(**payload)
         content = response['choices'][0]['message']['content']
         print("Response Content:", content)  # Debug statement
-        subcat = json.loads(content)['subcategory']
-        return subcat
+        responses = json.loads(content)['responses']
+        return responses
     except openai.error.ServiceUnavailableError as e:
         print("Service Unavailable Error. Retrying...")
         raise RetryError(attempt=e.last_attempt)  # Raising RetryError to trigger retry with exponential backoff
     except Exception as e:
         print("Error in JSON Parse", e)
-        return 'Other'
+        return ["Other" for _ in responses]
     
 operation_to_function_map = {
     Operation.CATEGORIZE: categorize_response,
     Operation.NORMALIZE: normalize_response,
 }
 
-def process_data(survey_data, categories):
-    for _, row in survey_data.iterrows():
-        processed_row = {}
+def process_data(survey_data, categories, batch_size=50):
+    num_rows = len(survey_data)
+    for i in range(0, num_rows, batch_size):
+        batch_data = survey_data.iloc[i:min(i+batch_size, num_rows)].copy()
         for cat in categories:
             question = cat.get("question")
             operation_str = cat.get("operation")
+            id_column = cat.get("id_column")
+
             try:
                 operation = Operation[operation_str.upper()]
             except KeyError:
@@ -82,23 +93,22 @@ def process_data(survey_data, categories):
                 continue
 
             process_func = operation_to_function_map[operation]
-            
             subcategories = [subcat.get("name") for subcat in cat.get("subcategories", [])]
-            response_key = cat.get("column_name")
-            
-            if response_key not in row:
-                print(f'Key {response_key} not found in row. Skipping...')
-                continue
-                
-            responses = row[response_key]
-            if responses:
-                processed_responses = process_func(question, responses, subcategories)
-                processed_row[response_key] = processed_responses
+            response_key = cat.get("processing_column")
 
-        new_row = {**row, **processed_row}
-        # save new row to the csv file
-        new_data = pd.DataFrame([new_row])
-        new_data.to_csv('newdata.csv', mode='a', header=False, index=False)
+            batch_responses = batch_data[response_key].tolist()
+            batch_ids = batch_data[id_column].tolist()
+
+            if batch_responses and batch_ids:
+                responses_stringified = "\n".join([f"{id_},{resp}" for id_, resp in zip(batch_ids, batch_responses)])
+                processed_responses = process_func(question, responses_stringified, subcategories)
+                processed_subcategories = [resp['subcategory'] for resp in processed_responses]
+                
+                batch_data.loc[:, response_key] = processed_subcategories
+
+            new_data = pd.DataFrame(batch_data)
+            mode = 'a' if i > 0 else 'w'  # write mode, use 'a' for append if it's not the first batch
+            new_data.to_csv('newdata.csv', mode=mode, header=(i == 0), index=False)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,8 @@
     "categories": [
         {
             "question": "What is your job title?",
-            "column_name": "job_title",
+            "processing_column": "job_title",
+            "id_column": "record_id",
             "operation": "categorize",
             "subcategories": [
                 {

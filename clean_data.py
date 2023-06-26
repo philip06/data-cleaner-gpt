@@ -1,3 +1,4 @@
+import yaml
 import json
 import pandas as pd
 import openai
@@ -12,18 +13,55 @@ class Operation(Enum):
     CATEGORIZE = "categorize"
     NORMALIZE = "normalize"
 
-# Dummy function
+@retry(stop=stop_after_attempt(3), wait=wait_exponential())
 def normalize_response(question, responses, subcategories):
-    normalized_response = responses.lower()
-    return normalized_response
+    payload = {
+        "model": "gpt-3.5-turbo",
+        "temperature": 0,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an assistant trained to normalize responses. "
+                "Please make sure each response follows the correct format, is free from typographical errors, and has consistent capitalization and punctuation."
+            },
+            {
+                "role": "assistant",
+                "content": f"""
+                Please normalize the following records: 
+                ###
+                {responses}
+                ###
+                Desired Format: JSON with the key normalized. Example: {{
+                    "records": [
+                        {{ 
+                            "record_id":"None"
+                            "subcategory":"None"
+                        }}
+                    ]
+                }}
+                """,
+            },
+        ],
+    }
 
+    try:
+        response = openai.ChatCompletion.create(**payload)
+        content = response['choices'][0]['message']['content']
+        print("Response Content:", content)  # Debug statement
+        responses = json.loads(content)['records']
+        return responses
+    except openai.error.ServiceUnavailableError as e:
+        print("Service Unavailable Error. Retrying...")
+        raise RetryError(attempt=e.last_attempt)  # Raising RetryError to trigger retry with exponential backoff
+    except Exception as e:
+        print("Error in JSON Parse", e)
+        return ["Other" for _ in responses]
 
-def load_categories(filename):
-    data = pd.read_json(filename)
-    
-    categories = data['categories'].tolist()
+def load_tasks(filename):
+    with open(filename, 'r') as stream:
+        data_loaded = yaml.safe_load(stream)
 
-    return categories
+    return data_loaded['tasks']
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential())
 def categorize_response(question, responses, subcategories):
@@ -41,7 +79,7 @@ def categorize_response(question, responses, subcategories):
                 "role": "assistant",
                 "content": f"""
                 Question: {question}
-                Here are the possible subcategories: {', '.join([subcat['name'] if isinstance(subcat, dict) else subcat for subcat in subcategories])}. 
+                Here are the possible subcategories: {', '.join(subcategories)}. 
                 Please categorize the following responses: 
                 ###
                 {responses}
@@ -78,14 +116,16 @@ operation_to_function_map = {
     Operation.NORMALIZE: normalize_response,
 }
 
-def process_data(survey_data, categories, batch_size=50):
+def process_data(survey_data, tasks, batch_size=50):
     num_rows = len(survey_data)
-    for i in range(0, num_rows, batch_size):
-        batch_data = survey_data.iloc[i:min(i+batch_size, num_rows)].copy()
-        for cat in categories:
-            question = cat.get("question")
-            operation_str = cat.get("operation")
-            id_column = cat.get("id_column")
+    for task in tasks:
+        output_file = task.get("output_file", "output_file.csv")  # If not specified, default is "newdata.csv"
+        for i in range(0, num_rows, batch_size):
+            batch_data = survey_data.iloc[i:min(i+batch_size, num_rows)].copy()
+
+            question = task.get("question")
+            operation_str = task.get("operation")
+            id_column = task.get("id_column")
 
             try:
                 operation = Operation[operation_str.upper()]
@@ -94,8 +134,8 @@ def process_data(survey_data, categories, batch_size=50):
                 continue
 
             process_func = operation_to_function_map[operation]
-            subcategories = [subcat.get("name") for subcat in cat.get("subcategories", [])]
-            response_key = cat.get("processing_column")
+            subcategories = [subtask.get("name") for subtask in task.get("subtasks", [])]
+            response_key = task.get("data_column")
 
             batch_responses = batch_data[response_key].tolist()
             batch_ids = batch_data[id_column].tolist()
@@ -109,15 +149,15 @@ def process_data(survey_data, categories, batch_size=50):
 
             new_data = pd.DataFrame(batch_data)
             mode = 'a' if i > 0 else 'w'  # write mode, use 'a' for append if it's not the first batch
-            new_data.to_csv('newdata.csv', mode=mode, header=(i == 0), index=False)
+            new_data.to_csv(output_file, mode=mode, header=(i == 0), index=False)
 
 
 if __name__ == "__main__":
     # load data from csv
     survey_data = pd.read_csv("input_data.csv", encoding='ISO-8859-1')
 
-    # load categories from json file
-    categories = load_categories("categories.json")
+    # load tasks from yaml file
+    tasks = load_tasks("config.yaml")
 
     # process the data
-    process_data(survey_data, categories)
+    process_data(survey_data, tasks)

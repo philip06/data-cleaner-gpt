@@ -16,18 +16,28 @@ class Operation(Enum):
 @retry(stop=stop_after_attempt(3), wait=wait_exponential())
 def normalize_response(question, responses, subcategories):
     payload = {
-        "model": "gpt-3.5-turbo",
+        "model": "gpt-3.5-turbo-16k",
         "temperature": 0,
         "messages": [
             {
                 "role": "system",
-                "content": "You are an assistant trained to normalize responses. "
-                "Please make sure each response follows the correct format, is free from typographical errors, and has consistent capitalization and punctuation."
+                "content": "You are a sophisticated assistant trained to normalize responses according to the following rules: \
+                - Convert all text to lowercase. \
+                - Remove any extra white spaces. \
+                - Standardize dates to the 'YYYY-MM-DD' format. \
+                - Remove or replace special characters, unless part of a URL or email address. \
+                - Replace missing or null values with 'unknown'. \
+                - Expand common abbreviations. \
+                - Convert all currencies to USD and standardize number formats (ie: $1.00) \
+                - Standardize text encoding to UTF-8. \
+                - Extract domain name from URLs or email addresses. \
+                - Correct commonly misspelled words. \
+                For any response, ensure it follows the correct format, is free from typographical errors, and has consistent capitalization and punctuation."
             },
             {
                 "role": "assistant",
                 "content": f"""
-                Please normalize the following records: 
+                Given the rules I'm trained with, please help me normalize the following records. Please limit response to 2 fields per record
                 ###
                 {responses}
                 ###
@@ -35,7 +45,7 @@ def normalize_response(question, responses, subcategories):
                     "records": [
                         {{ 
                             "record_id":"None"
-                            "subcategory":"None"
+                            "processed":"None"
                         }}
                     ]
                 }}
@@ -67,7 +77,7 @@ def load_tasks(filename):
 def categorize_response(question, responses, subcategories):
 
     payload = {
-        "model": "gpt-3.5-turbo",
+        "model": "gpt-3.5-turbo-16k",
         "temperature": 0,
         "messages": [
             {
@@ -84,12 +94,12 @@ def categorize_response(question, responses, subcategories):
                 ###
                 {responses}
                 ###
-                Desired Format: JSON with the key subcategory. Make sure 
+                Desired Format: JSON with the key processed. Make sure 
                 Example: {{
                     "responses": [
                         {{ 
                             "record_id":"None"
-                            "subcategory":"None"
+                            "processed":"None"
                         }}
                     ]
                 }}
@@ -143,7 +153,7 @@ def process_data(survey_data, tasks, batch_size=50):
             if batch_responses and batch_ids:
                 responses_stringified = "\n".join([f"{id_},{resp}" for id_, resp in zip(batch_ids, batch_responses)])
                 processed_responses = process_func(question, responses_stringified, subcategories)
-                processed_subcategories = [resp['subcategory'] for resp in processed_responses]
+                processed_subcategories = [resp['processed'] for resp in processed_responses]
                 
                 batch_data.loc[:, response_key] = processed_subcategories
 

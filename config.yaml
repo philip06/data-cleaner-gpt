@@ -37,5 +37,5 @@ tasks:
   - operation: "normalize"
     question: "What is your favorite color?"
     output_file: "normalized.csv"
-    data_column: "color"
-    id_column: "record_id"
+    data_column: "text"
+    id_column: "id"

@@ -1,6 +1,6 @@
 # data-cleaner-gpt
 
-This project uses OpenAI's GPT model to categorize and normalize survey data. It uses a YAML configuration file to setup tasks and the OpenAI API for AI-powered categorization and normalization.
+This project uses OpenAI's GPT model to categorize and normalize anonymized data. It uses a YAML configuration file to setup tasks and the OpenAI API for AI-powered categorization and normalization.
 
 ## Installation
 

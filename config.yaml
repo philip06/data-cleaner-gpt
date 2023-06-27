@@ -44,3 +44,11 @@ tasks:
     model: "gpt-3.5-turbo-16k"
     batch_size: 50
     id_column: "id"
+  
+  - operation: "enrich"
+    input_file: "random_job_titles.csv"
+    output_file: "enriched_data.csv"
+    data_column: "job_title"
+    model: "gpt-3.5-turbo-16k"
+    batch_size: 50
+    id_column: "id"

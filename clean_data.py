@@ -12,6 +12,58 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 class Operation(Enum):
     CATEGORIZE = "categorize"
     NORMALIZE = "normalize"
+    ENRICH = "enrich"
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential())
+def enrich_data(context, responses, subcategories, model):
+    payload = {
+        "model": model,
+        "temperature": 0.5,
+        "messages": [
+            {
+                "role": "system",
+                "content": f"""You are a sophisticated assistant trained to enrich data according to the following rules:
+                - {context}
+                - Add additional relevant information to each record.
+                - Enhance the existing data with external sources or APIs.
+                - Validate and correct data inconsistencies.
+                - Perform feature engineering or extraction.
+                - Perform any other data enrichment tasks based on the provided context and requirements."""
+            },
+            {
+                "role": "assistant",
+                "content": f"""
+                Given the rules I'm trained with, please help me enrich the following records.
+                ###
+                {responses}
+                ###
+                Desired Format: JSON with the all enrichment data under processed key. Example: {{
+                    "records": [
+                        {{ 
+                            "record_id":"None"
+                            "processed":"None"
+                        }}
+                    ]
+                }}
+                """,
+            },
+        ],
+    }
+
+    try:
+        response = openai.ChatCompletion.create(**payload)
+        content = response['choices'][0]['message']['content']
+        responses = json.loads(content)['records']
+
+        print("Response Content:", content)  # Debug statement
+        
+        return responses
+    except openai.error.ServiceUnavailableError as e:
+        print("Service Unavailable Error. Retrying...")
+        raise RetryError(attempt=e.last_attempt)  # Raising RetryError to trigger retry with exponential backoff
+    except Exception as e:
+        print("Error in JSON Parse", e)
+        return ["Other" for _ in responses]
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential())
 def normalize_response(context, responses, subcategories, model):
@@ -125,6 +177,7 @@ def categorize_response(context, responses, subcategories, model):
 operation_to_function_map = {
     Operation.CATEGORIZE: categorize_response,
     Operation.NORMALIZE: normalize_response,
+    Operation.ENRICH: enrich_data,
 }
 
 def process_data(tasks):

@@ -7,7 +7,7 @@ tasks:
     model: "gpt-3.5-turbo-16k"
     batch_size: 50
     id_column: "id"
-    subtasks:
+    subcategories:
       - name: Executive Leadership
         description: Roles at the senior-most level of an organization, responsible for overall strategic direction and decision-making.
       - name: Management

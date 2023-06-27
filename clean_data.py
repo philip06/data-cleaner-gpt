@@ -18,7 +18,7 @@ class Operation(Enum):
 def enrich_data(context, responses, subcategories, model):
     payload = {
         "model": model,
-        "temperature": 0.5,
+        "temperature": 0,
         "messages": [
             {
                 "role": "system",
@@ -40,8 +40,8 @@ def enrich_data(context, responses, subcategories, model):
                 Desired Format: JSON with the all enrichment data under processed key. Example: {{
                     "records": [
                         {{ 
-                            "record_id":"None"
-                            "processed":"None"
+                            "record_id":"None",
+                            "processed": "None"
                         }}
                     ]
                 }}
@@ -202,7 +202,7 @@ def process_data(tasks):
                 continue
 
             process_func = operation_to_function_map[operation]
-            subcategories = [subtask.get("name") for subtask in task.get("subtasks", [])]
+            subcategories = [subtask.get("name") for subtask in task.get("subcategories", [])]
             response_key = task.get("data_column")
 
             batch_responses = batch_data[response_key].tolist()

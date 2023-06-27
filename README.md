@@ -19,9 +19,10 @@ python3 -m pip install -r requirements.txt
 
 The tool uses a YAML configuration file named config.yaml where you define the tasks you want to execute. The tasks include:
 
-categorize: Categorizes provided responses according to predefined categories
-normalize: Normalizes text data according to specified rules
-enrich: Enriches the data with additional relevant information
+- categorize: Categorizes provided responses according to predefined categories
+- normalize: Normalizes text data according to specified rules
+- enrich: Enriches the data with additional relevant information
+
 Each task should be specified in the following way:
 
 ```yaml

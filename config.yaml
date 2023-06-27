@@ -1,9 +1,12 @@
 tasks:
   - operation: "categorize"
-    question: "What is your job title?"
+    context: "What is your job title?"
+    input_file: "random_job_titles.csv"
     output_file: "job_title_processed.csv"
     data_column: "job_title"
-    id_column: "record_id"
+    model: "gpt-3.5-turbo-16k"
+    batch_size: 50
+    id_column: "id"
     subtasks:
       - name: Executive Leadership
         description: Roles at the senior-most level of an organization, responsible for overall strategic direction and decision-making.
@@ -35,7 +38,9 @@ tasks:
         description: Any role that does not fit into one of the other categories mentioned above.
   
   - operation: "normalize"
-    question: "What is your favorite color?"
-    output_file: "normalized.csv"
+    input_file: "denormalized_data.csv"
+    output_file: "normalized2.csv"
     data_column: "text"
+    model: "gpt-3.5-turbo-16k"
+    batch_size: 50
     id_column: "id"

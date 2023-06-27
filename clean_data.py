@@ -14,30 +14,31 @@ class Operation(Enum):
     NORMALIZE = "normalize"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential())
-def normalize_response(question, responses, subcategories):
+def normalize_response(context, responses, subcategories, model):
     payload = {
-        "model": "gpt-3.5-turbo-16k",
+        "model": model,
         "temperature": 0,
         "messages": [
             {
                 "role": "system",
-                "content": "You are a sophisticated assistant trained to normalize responses according to the following rules: \
-                - Convert all text to lowercase. \
-                - Remove any extra white spaces. \
-                - Standardize dates to the 'YYYY-MM-DD' format. \
-                - Remove or replace special characters, unless part of a URL or email address. \
-                - Replace missing or null values with 'unknown'. \
-                - Expand common abbreviations. \
-                - Convert all currencies to USD and standardize number formats (ie: $1.00) \
-                - Standardize text encoding to UTF-8. \
-                - Extract domain name from URLs or email addresses. \
-                - Correct commonly misspelled words. \
-                For any response, ensure it follows the correct format, is free from typographical errors, and has consistent capitalization and punctuation."
+                "content": f"""You are a sophisticated assistant trained to normalize responses according to the following rules:
+                - {context}
+                - Convert all text to lowercase.
+                - Remove any extra white spaces.
+                - Standardize dates to the 'YYYY-MM-DD' format.
+                - Remove or replace special characters, unless part of a URL or email address.
+                - Replace missing or null values with 'unknown'.
+                - Expand common abbreviations.
+                - Convert all currencies to USD and standardize number formats (ie: $1.00)
+                - Standardize text encoding to UTF-8.
+                - Extract domain name from URLs or email addresses.
+                - Correct commonly misspelled words.
+                For any response, ensure it follows the correct format, is free from typographical errors, and has consistent capitalization and punctuation."""
             },
             {
                 "role": "assistant",
                 "content": f"""
-                Given the rules I'm trained with, please help me normalize the following records. Please limit response to 2 fields per record
+                Given the rules I'm trained with, please help me normalize the following records.
                 ###
                 {responses}
                 ###
@@ -74,10 +75,10 @@ def load_tasks(filename):
     return data_loaded['tasks']
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential())
-def categorize_response(question, responses, subcategories):
+def categorize_response(context, responses, subcategories, model):
 
     payload = {
-        "model": "gpt-3.5-turbo-16k",
+        "model": model,
         "temperature": 0,
         "messages": [
             {
@@ -88,7 +89,7 @@ def categorize_response(question, responses, subcategories):
             {
                 "role": "assistant",
                 "content": f"""
-                Question: {question}
+                Question: {context}
                 Here are the possible subcategories: {', '.join(subcategories)}. 
                 Please categorize the following responses: 
                 ###
@@ -126,14 +127,18 @@ operation_to_function_map = {
     Operation.NORMALIZE: normalize_response,
 }
 
-def process_data(survey_data, tasks, batch_size=50):
-    num_rows = len(survey_data)
+def process_data(tasks):
     for task in tasks:
-        output_file = task.get("output_file", "output_file.csv")  # If not specified, default is "newdata.csv"
+        input_file = task.get("input_file")
+        batch_size = task.get("batch_size", 50)
+        survey_data = pd.read_csv(input_file, encoding='ISO-8859-1')
+        output_file = task.get("output_file", "output_file.csv")
+        model = task.get("model", "gpt-3.5-turbo")
+        num_rows = len(survey_data)
         for i in range(0, num_rows, batch_size):
             batch_data = survey_data.iloc[i:min(i+batch_size, num_rows)].copy()
 
-            question = task.get("question")
+            context = task.get("context", "")
             operation_str = task.get("operation")
             id_column = task.get("id_column")
 
@@ -152,7 +157,7 @@ def process_data(survey_data, tasks, batch_size=50):
 
             if batch_responses and batch_ids:
                 responses_stringified = "\n".join([f"{id_},{resp}" for id_, resp in zip(batch_ids, batch_responses)])
-                processed_responses = process_func(question, responses_stringified, subcategories)
+                processed_responses = process_func(context, responses_stringified, subcategories, model)
                 processed_subcategories = [resp['processed'] for resp in processed_responses]
                 
                 batch_data.loc[:, response_key] = processed_subcategories
@@ -163,11 +168,8 @@ def process_data(survey_data, tasks, batch_size=50):
 
 
 if __name__ == "__main__":
-    # load data from csv
-    survey_data = pd.read_csv("input_data.csv", encoding='ISO-8859-1')
-
     # load tasks from yaml file
     tasks = load_tasks("config.yaml")
 
     # process the data
-    process_data(survey_data, tasks)
+    process_data(tasks)
